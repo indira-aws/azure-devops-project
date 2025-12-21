@@ -1,79 +1,33 @@
-# Deploy to Azure Kubernetes Service
-# Build and push image to Azure Container Registry; Deploy to Azure Kubernetes Service
-# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
-
 trigger:
 - main
 
-resources:
-- repo: self
-
 variables:
-
-  # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: '493ebffe-f9d8-433e-a5b0-2dc834254931'
-  imageRepository: 'reyazshaikazuredevopsproject'
-  containerRegistry: 'reyadevopsacr.azurecr.io'
-  dockerfilePath: '**/Dockerfile'
-  tag: '$(Build.BuildId)'
-  imagePullSecret: 'reyadevopsacrcf9b-auth'
-
-  # Agent VM image name
-  vmImageName: 'ubuntu-latest'
-
+  imageName: demo-app
 
 stages:
 - stage: Build
-  displayName: Build stage
   jobs:
-  - job: Build
-    displayName: Build
+  - job: BuildPush
     pool:
-      vmImage: $(vmImageName)
+      name: self-hosted-linux
     steps:
     - task: Docker@2
-      displayName: Build and push an image to container registry
       inputs:
+        containerRegistry: 'reyadevopsacr'
+        repository: $(imageName)
         command: buildAndPush
-        repository: $(imageRepository)
-        dockerfile: $(dockerfilePath)
-        containerRegistry: $(dockerRegistryServiceConnection)
-        tags: |
-          $(tag)
-
-    - upload: manifests
-      artifact: manifests
+        Dockerfile: Dockerfile
+        tags: latest
 
 - stage: Deploy
-  displayName: Deploy stage
   dependsOn: Build
-
   jobs:
-  - deployment: Deploy
-    displayName: Deploy
+  - job: Deploy
     pool:
-      vmImage: $(vmImageName)
-    environment: 'ReyazShaikazuredevopsproject.default'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: KubernetesManifest@0
-            displayName: Create imagePullSecret
-            inputs:
-              action: createSecret
-              secretName: $(imagePullSecret)
-              dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
-
-          - task: KubernetesManifest@0
-            displayName: Deploy to Kubernetes cluster
-            inputs:
-              action: deploy
-              manifests: |
-                $(Pipeline.Workspace)/manifests/deployment.yml
-                $(Pipeline.Workspace)/manifests/service.yml
-              imagePullSecrets: |
-                $(imagePullSecret)
-              containers: |
-                $(containerRegistry)/$(imageRepository):$(tag)
-
+      name: self-hosted-linux
+    steps:
+    - task: KubernetesManifest@1
+      inputs:
+        action: deploy
+        kubernetesServiceConnection: 'reyaaks-default'
+        manifests: k8s-deployment.yaml
