@@ -9,7 +9,7 @@ stages:
   jobs:
   - job: BuildPush
     pool:
-      name: self-hosted-linux
+      vmImage: ubuntu-latest
     steps:
     - task: Docker@2
       inputs:
