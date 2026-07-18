@@ -9,7 +9,7 @@ stages:
   jobs:
   - job: BuildPush
     pool:
-      name: self-hosted-linux
+      name: default
     steps:
     - task: Docker@2
       inputs:
@@ -24,7 +24,7 @@ stages:
   jobs:
   - job: Deploy
     pool:
-      name: self-hosted-linux
+      name: default
     steps:
     - task: KubernetesManifest@1
       inputs:
